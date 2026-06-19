@@ -15,11 +15,15 @@
 
 **Salida esperada:** "hello tenant" — login, sesión con `tenant_id`, RLS probada. *(Auth/RLS pendientes de credenciales de DB.)*
 
-## Fase 1 — Núcleo Multi-Tenant · PENDIENTE
-- [ ] M1 Auth + RBAC
-- [ ] M2 Super Admin (tenants, planes)
-- [ ] M12 Equipo y roles
-- [ ] M3 Gestión de eventos (CRUD + wizard)
+## Fase 1 — Núcleo Multi-Tenant · EN CURSO
+- [x] RBAC: catálogo de permisos + roles de sistema + helpers (`packages/core/rbac.ts`) + tests
+- [x] Resolución de tenant por host/subdominio (`packages/core/tenant.ts`) + tests
+- [x] Middleware de tenant en web (`apps/web/middleware.ts`, header `x-tenant-slug`)
+- [x] Tokens firmados HMAC para QR/confirmación (`apps/web/lib/tokens.ts`)
+- [ ] M1 Auth (login/sesión) — requiere credenciales Supabase (Q-01)
+- [ ] M2 Super Admin (tenants, planes) — requiere DB
+- [ ] M12 Equipo y roles — requiere DB
+- [ ] M3 Gestión de eventos (CRUD + wizard) — requiere DB
 - [ ] Branding por tenant
 
 ## Fase 2 — Público + Registro + Confirmación · PENDIENTE
