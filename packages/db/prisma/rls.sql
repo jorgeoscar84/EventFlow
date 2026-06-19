@@ -1,0 +1,19 @@
+-- RLS (Row-Level Security) — red de seguridad multi-tenant (PRD/09 §9.1, PRD/02 §2.3)
+-- Se aplica DESPUÉS de `prisma migrate`. El contexto de tenant se fija por sesión:
+--   SELECT set_config('app.tenant_id', '<uuid>', true);
+-- El service role (worker/superadmin) usa una conexión con BYPASSRLS controlada y auditada.
+--
+-- Patrón por tabla con columna tenantId (en Postgres: "tenantId"):
+--
+-- ALTER TABLE "Event" ENABLE ROW LEVEL SECURITY;
+-- CREATE POLICY tenant_isolation ON "Event"
+--   USING ("tenantId" = current_setting('app.tenant_id', true)::uuid);
+--
+-- Repetir para: "Registration", "RegistrationFieldValue" (vía join), "Payment",
+-- "MessageTemplate", "MessageCampaign", "MessageJob", "MessageLog", "Raffle",
+-- "SmtpSetting", "Integration", "AiAgentConfig", "AiKnowledgeSource",
+-- "AiKnowledgeChunk", "AiConversation", "AiMessage", "AiUsage", "TenantUsage", etc.
+--
+-- NOTA: Las tablas GLOBAL (Plan, Permission) NO llevan RLS por tenant.
+-- Las políticas exactas se generarán automáticamente en la migración de Fase 0
+-- una vez confirmadas las credenciales de DB (QUESTIONS Q-01).

@@ -1,0 +1,815 @@
+// Eventflow — Schema Prisma
+// Refleja PRD/04-MODELO-DE-DATOS.md y PRD/12-ASISTENTE-IA.md
+// Postgres + pgvector. Toda tabla de negocio lleva tenantId (salvo tablas GLOBAL).
+// RLS se aplica vía migración SQL adicional (ver prisma/migrations/rls).
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+  extensions = [pgcrypto, vector]
+}
+
+// ───────────────────────── Enums ─────────────────────────
+
+enum TenantStatus {
+  active
+  suspended
+  trial
+}
+
+enum PlanInterval {
+  month
+  year
+}
+
+enum UserStatus {
+  active
+  invited
+  disabled
+}
+
+enum EventType {
+  in_person
+  digital
+  hybrid
+}
+
+enum EventStatus {
+  draft
+  published
+  archived
+  finished
+}
+
+enum EventVisibility {
+  public
+  private
+  unlisted
+}
+
+enum OnlineProvider {
+  zoom
+  meet
+  youtube
+  custom
+}
+
+enum CustomFieldType {
+  text
+  number
+  select
+  checkbox
+  date
+  document_id
+}
+
+enum RegistrationStatus {
+  registered
+  confirmed
+  waitlist
+  cancelled
+  attended
+  no_show
+}
+
+enum AttendanceResult {
+  ok
+  duplicate
+  invalid
+  not_confirmed
+}
+
+enum PaymentProvider {
+  stripe
+  manual
+  other
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  failed
+  refunded
+  manual_paid
+}
+
+enum MessageChannel {
+  email
+  whatsapp
+  sms
+}
+
+enum CampaignTriggerType {
+  scheduled_absolute
+  relative_to_event
+  on_event
+}
+
+enum CampaignStatus {
+  draft
+  scheduled
+  running
+  sent
+  cancelled
+}
+
+enum MessageJobStatus {
+  queued
+  sent
+  failed
+  skipped
+}
+
+enum MessageLogStatus {
+  sent
+  delivered
+  opened
+  clicked
+  bounced
+  complaint
+  failed
+}
+
+enum IntegrationType {
+  whatsapp_twilio
+  whatsapp_meta
+  webhook
+  zapier
+  llm_openai
+  llm_anthropic
+  llm_azure
+}
+
+enum RaffleStatus {
+  configured
+  running
+  finished
+}
+
+enum RaffleRoundStatus {
+  pending
+  drawing
+  won
+  redrawn
+}
+
+enum AiConfigScope {
+  tenant
+  event
+}
+
+enum AiModelProvider {
+  openai
+  anthropic
+  azure_openai
+  local
+  default
+}
+
+enum AiKnowledgeScope {
+  event_only
+  event_and_tenant
+}
+
+enum AiKnowledgeSourceType {
+  auto_event
+  faq
+  document
+  url
+  text
+}
+
+enum AiKnowledgeStatus {
+  active
+  archived
+}
+
+enum AiConversationChannel {
+  web
+  whatsapp
+  sms
+  email
+}
+
+enum AiConversationStatus {
+  open
+  escalated
+  closed
+}
+
+enum AiMessageRole {
+  user
+  assistant
+  system
+  tool
+}
+
+// ───────────────────────── Global (plataforma) ─────────────────────────
+
+model Plan {
+  id         String       @id @default(uuid()) @db.Uuid
+  name       String
+  limits     Json
+  priceCents Int          @default(0)
+  interval   PlanInterval @default(month)
+  isActive   Boolean      @default(true)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  tenants    Tenant[]
+}
+
+model Tenant {
+  id           String       @id @default(uuid()) @db.Uuid
+  name         String
+  slug         String       @unique
+  planId       String?      @db.Uuid
+  plan         Plan?        @relation(fields: [planId], references: [id])
+  status       TenantStatus @default(trial)
+  customDomain String?
+  createdBy    String?      @db.Uuid
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  deletedAt    DateTime?
+
+  users               User[]
+  roles               Role[]
+  events              Event[]
+  registrations       Registration[]
+  payments            Payment[]
+  smtpSetting         SmtpSetting?
+  integrations        Integration[]
+  messageTemplates    MessageTemplate[]
+  messageCampaigns    MessageCampaign[]
+  raffles             Raffle[]
+  usage               TenantUsage[]
+  aiAgentConfigs      AiAgentConfig[]
+  aiKnowledgeSources  AiKnowledgeSource[]
+  aiKnowledgeChunks   AiKnowledgeChunk[]
+  aiConversations     AiConversation[]
+  aiUsage             AiUsage[]
+
+  @@index([status])
+}
+
+model TenantUsage {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String   @db.Uuid
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  period          String // YYYY-MM
+  eventsCount     Int      @default(0)
+  attendeesCount  Int      @default(0)
+  emailsSent      Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([tenantId, period])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  actorId    String?  @db.Uuid
+  tenantId   String?  @db.Uuid
+  action     String
+  targetType String?
+  targetId   String?
+  metadata   Json?
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+}
+
+// ───────────────────────── Identidad y acceso ─────────────────────────
+
+model User {
+  id           String     @id @default(uuid()) @db.Uuid
+  tenantId     String?    @db.Uuid
+  tenant       Tenant?    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  email        String
+  name         String
+  phone        String?
+  passwordHash String?
+  isSuperAdmin Boolean    @default(false)
+  status       UserStatus @default(invited)
+  lastLoginAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  deletedAt    DateTime?
+
+  userRoles     UserRole[]
+  eventStaff    EventStaff[]
+  checkedInLogs AttendanceLog[] @relation("ScannedBy")
+  registrationsCheckedIn Registration[] @relation("CheckedInBy")
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+}
+
+model Role {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String?  @db.Uuid
+  tenant      Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  rolePermissions RolePermission[]
+  userRoles       UserRole[]
+
+  @@index([tenantId])
+}
+
+model Permission {
+  id          String           @id @default(uuid()) @db.Uuid
+  key         String           @unique // event:create, report:export, ...
+  description String?
+  rolePermissions RolePermission[]
+}
+
+model RolePermission {
+  roleId       String     @db.Uuid
+  permissionId String     @db.Uuid
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+model UserRole {
+  userId String @db.Uuid
+  roleId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+}
+
+// ───────────────────────── Eventos ─────────────────────────
+
+model Event {
+  id                        String          @id @default(uuid()) @db.Uuid
+  tenantId                  String          @db.Uuid
+  tenant                    Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  slug                      String
+  title                     String
+  description               String?
+  type                      EventType
+  status                    EventStatus     @default(draft)
+  visibility                EventVisibility @default(public)
+  startsAt                  DateTime
+  endsAt                    DateTime
+  timezone                  String          @default("UTC")
+  coverImageUrl             String?
+  capacity                  Int?
+  locationName              String?
+  locationAddress           String?
+  locationLat               Decimal?        @db.Decimal(10, 7)
+  locationLng               Decimal?        @db.Decimal(10, 7)
+  onlineUrl                 String?
+  onlineProvider            OnlineProvider?
+  requiresPayment           Boolean         @default(false)
+  requiresConfirmation      Boolean         @default(true)
+  confirmationDeadlineHours Int             @default(24)
+  settings                  Json?
+  publishedAt               DateTime?
+  createdAt                 DateTime        @default(now())
+  updatedAt                 DateTime        @updatedAt
+  deletedAt                 DateTime?
+
+  translations     EventTranslation[]
+  customFields     CustomField[]
+  ticketTypes      TicketType[]
+  staff            EventStaff[]
+  landingBlocks    LandingBlock[]
+  registrations    Registration[]
+  attendanceLogs   AttendanceLog[]
+  payments         Payment[]
+  messageTemplates MessageTemplate[]
+  messageCampaigns MessageCampaign[]
+  raffles          Raffle[]
+  aiAgentConfigs   AiAgentConfig[]
+  aiKnowledgeSources AiKnowledgeSource[]
+  aiKnowledgeChunks  AiKnowledgeChunk[]
+  aiConversations    AiConversation[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId, status, startsAt])
+}
+
+model EventTranslation {
+  id          String  @id @default(uuid()) @db.Uuid
+  eventId     String  @db.Uuid
+  event       Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  locale      String
+  title       String
+  description String?
+
+  @@unique([eventId, locale])
+}
+
+model CustomField {
+  id       String          @id @default(uuid()) @db.Uuid
+  eventId  String          @db.Uuid
+  event    Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  key      String
+  label    String
+  type     CustomFieldType @default(text)
+  options  Json?
+  required Boolean         @default(false)
+  order    Int             @default(0)
+
+  values RegistrationFieldValue[]
+
+  @@unique([eventId, key])
+}
+
+model TicketType {
+  id            String   @id @default(uuid()) @db.Uuid
+  eventId       String   @db.Uuid
+  event         Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  name          String
+  priceCents    Int      @default(0)
+  currency      String   @default("USD")
+  quantityTotal Int?
+  quantitySold  Int      @default(0)
+  isFree        Boolean  @default(true)
+  salesStart    DateTime?
+  salesEnd      DateTime?
+
+  registrations Registration[]
+}
+
+model EventStaff {
+  id        String  @id @default(uuid()) @db.Uuid
+  eventId   String  @db.Uuid
+  event     Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId    String  @db.Uuid
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gateLabel String?
+
+  @@unique([eventId, userId])
+}
+
+model LandingBlock {
+  id        String  @id @default(uuid()) @db.Uuid
+  eventId   String  @db.Uuid
+  event     Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  type      String // hero, agenda, speakers, gallery, faq, sponsors, cta, countdown, map, testimonials
+  order     Int     @default(0)
+  content   Json
+  isVisible Boolean @default(true)
+}
+
+// ───────────────────────── Registros y asistencia ─────────────────────────
+
+model Registration {
+  id                String             @id @default(uuid()) @db.Uuid
+  tenantId          String             @db.Uuid
+  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  eventId           String             @db.Uuid
+  event             Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  ticketTypeId      String?            @db.Uuid
+  ticketType        TicketType?        @relation(fields: [ticketTypeId], references: [id])
+  fullName          String
+  email             String
+  phone             String
+  status            RegistrationStatus @default(registered)
+  confirmationToken String             @unique
+  qrToken           String             @unique
+  confirmedAt       DateTime?
+  checkedInAt       DateTime?
+  checkedInById     String?            @db.Uuid
+  checkedInBy       User?              @relation("CheckedInBy", fields: [checkedInById], references: [id])
+  checkinGate       String?
+  source            String?
+  consentMarketing  Boolean            @default(false)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  fieldValues    RegistrationFieldValue[]
+  attendanceLogs AttendanceLog[]
+  payments       Payment[]
+  aiConversations AiConversation[]
+
+  @@unique([eventId, email])
+  @@index([tenantId, eventId, status])
+}
+
+model RegistrationFieldValue {
+  id             String       @id @default(uuid()) @db.Uuid
+  registrationId String       @db.Uuid
+  registration   Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  customFieldId  String       @db.Uuid
+  customField    CustomField  @relation(fields: [customFieldId], references: [id], onDelete: Cascade)
+  value          String?
+
+  @@unique([registrationId, customFieldId])
+}
+
+model AttendanceLog {
+  id             String           @id @default(uuid()) @db.Uuid
+  registrationId String?          @db.Uuid
+  registration   Registration?    @relation(fields: [registrationId], references: [id])
+  eventId        String           @db.Uuid
+  event          Event            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  scannedById    String?          @db.Uuid
+  scannedBy      User?            @relation("ScannedBy", fields: [scannedById], references: [id])
+  gate           String?
+  result         AttendanceResult
+  scannedAt      DateTime         @default(now())
+
+  @@index([eventId, scannedAt])
+}
+
+// ───────────────────────── Pagos ─────────────────────────
+
+model Payment {
+  id             String          @id @default(uuid()) @db.Uuid
+  tenantId       String          @db.Uuid
+  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  eventId        String          @db.Uuid
+  event          Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  registrationId String          @db.Uuid
+  registration   Registration    @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  amountCents    Int
+  currency       String          @default("USD")
+  provider       PaymentProvider @default(manual)
+  providerRef    String?
+  status         PaymentStatus   @default(pending)
+  paidAt         DateTime?
+  notes          String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([tenantId, eventId, status])
+}
+
+// ───────────────────────── Mensajería ─────────────────────────
+
+model SmtpSetting {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @unique @db.Uuid
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  fromName   String
+  fromEmail  String
+  sesRegion  String
+  smtpHost   String
+  smtpPort   Int      @default(587)
+  smtpUser   String
+  smtpPass   String // cifrado en reposo
+  verified   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Integration {
+  id        String          @id @default(uuid()) @db.Uuid
+  tenantId  String          @db.Uuid
+  tenant    Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  type      IntegrationType
+  config    Json // cifrado
+  isActive  Boolean         @default(false)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  @@unique([tenantId, type])
+}
+
+model MessageTemplate {
+  id          String         @id @default(uuid()) @db.Uuid
+  tenantId    String         @db.Uuid
+  tenant      Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  eventId     String?        @db.Uuid
+  event       Event?         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  channel     MessageChannel @default(email)
+  key         String // confirmation, reminder_24h, reminder_1h, reconfirm, ticket_qr, thank_you, custom
+  subject     String?
+  body        String
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([tenantId, eventId])
+}
+
+model MessageCampaign {
+  id            String              @id @default(uuid()) @db.Uuid
+  tenantId      String              @db.Uuid
+  tenant        Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  eventId       String              @db.Uuid
+  event         Event               @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  name          String
+  channel       MessageChannel      @default(email)
+  templateKey   String
+  triggerType   CampaignTriggerType
+  scheduledAt   DateTime?
+  offsetMinutes Int?
+  audienceFilter Json
+  status        CampaignStatus      @default(draft)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  jobs MessageJob[]
+
+  @@index([tenantId, eventId])
+}
+
+model MessageJob {
+  id             String           @id @default(uuid()) @db.Uuid
+  campaignId     String           @db.Uuid
+  campaign       MessageCampaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  registrationId String           @db.Uuid
+  channel        MessageChannel
+  scheduledFor   DateTime
+  status         MessageJobStatus @default(queued)
+  attempts       Int              @default(0)
+  lastError      String?
+  createdAt      DateTime         @default(now())
+
+  logs MessageLog[]
+
+  @@unique([campaignId, registrationId])
+  @@index([status, scheduledFor])
+}
+
+model MessageLog {
+  id                String           @id @default(uuid()) @db.Uuid
+  registrationId    String           @db.Uuid
+  campaignId        String?          @db.Uuid
+  jobId             String?          @db.Uuid
+  job               MessageJob?      @relation(fields: [jobId], references: [id])
+  channel           MessageChannel
+  templateKey       String
+  providerMessageId String?
+  status            MessageLogStatus @default(sent)
+  eventPayload      Json?
+  createdAt         DateTime         @default(now())
+
+  @@index([registrationId])
+}
+
+// ───────────────────────── Sorteos ─────────────────────────
+
+model Raffle {
+  id             String       @id @default(uuid()) @db.Uuid
+  tenantId       String       @db.Uuid
+  tenant         Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  eventId        String       @db.Uuid
+  event          Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  name           String
+  eligibleFilter Json
+  requirePresent Boolean      @default(true)
+  totalWinners   Int          @default(1)
+  status         RaffleStatus @default(configured)
+  prizes         Json?
+  seed           String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  rounds RaffleRound[]
+}
+
+model RaffleRound {
+  id          String            @id @default(uuid()) @db.Uuid
+  raffleId    String            @db.Uuid
+  raffle      Raffle            @relation(fields: [raffleId], references: [id], onDelete: Cascade)
+  roundNumber Int
+  prize       String?
+  status      RaffleRoundStatus @default(pending)
+
+  winners RaffleWinner[]
+
+  @@unique([raffleId, roundNumber])
+}
+
+model RaffleWinner {
+  id             String      @id @default(uuid()) @db.Uuid
+  raffleRoundId  String      @db.Uuid
+  raffleRound    RaffleRound @relation(fields: [raffleRoundId], references: [id], onDelete: Cascade)
+  registrationId String      @db.Uuid
+  wasPresent     Boolean     @default(false)
+  accepted       Boolean     @default(false)
+  drawnAt        DateTime    @default(now())
+}
+
+// ───────────────────────── Asistente IA (M14) ─────────────────────────
+
+model AiAgentConfig {
+  id                 String           @id @default(uuid()) @db.Uuid
+  tenantId           String           @db.Uuid
+  tenant             Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  scope              AiConfigScope    @default(tenant)
+  eventId            String?          @db.Uuid
+  event              Event?           @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  enabled            Boolean          @default(false)
+  displayName        String           @default("Asistente")
+  persona            String?
+  language           String           @default("auto")
+  welcomeMessage     String?
+  quickReplies       Json?
+  systemInstructions String?
+  allowedTopics      Json?
+  restrictedTopics   Json?
+  fallbackBehavior   Json?
+  leadCapture        Json?
+  enabledTools       Json?
+  modelProvider      AiModelProvider  @default(default)
+  modelName          String?
+  modelSettings      Json?
+  knowledgeScope     AiKnowledgeScope @default(event_and_tenant)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  @@unique([tenantId, scope, eventId])
+}
+
+model AiKnowledgeSource {
+  id            String                @id @default(uuid()) @db.Uuid
+  tenantId      String                @db.Uuid
+  tenant        Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  eventId       String?               @db.Uuid
+  event         Event?                @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  type          AiKnowledgeSourceType
+  title         String
+  status        AiKnowledgeStatus     @default(active)
+  rawRef        String?
+  lastIndexedAt DateTime?
+  createdBy     String?               @db.Uuid
+  createdAt     DateTime              @default(now())
+
+  chunks AiKnowledgeChunk[]
+
+  @@index([tenantId, eventId])
+}
+
+model AiKnowledgeChunk {
+  id         String                 @id @default(uuid()) @db.Uuid
+  tenantId   String                 @db.Uuid
+  tenant     Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  eventId    String?                @db.Uuid
+  event      Event?                 @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  sourceId   String                 @db.Uuid
+  source     AiKnowledgeSource      @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  content    String
+  tokenCount Int                    @default(0)
+  embedding  Unsupported("vector(1536)")?
+  metadata   Json?
+  createdAt  DateTime               @default(now())
+
+  @@index([tenantId, eventId])
+}
+
+model AiConversation {
+  id             String                @id @default(uuid()) @db.Uuid
+  tenantId       String                @db.Uuid
+  tenant         Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  eventId        String?               @db.Uuid
+  event          Event?                @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  channel        AiConversationChannel @default(web)
+  visitorRef     String?
+  registrationId String?               @db.Uuid
+  registration   Registration?         @relation(fields: [registrationId], references: [id])
+  status         AiConversationStatus  @default(open)
+  startedAt      DateTime              @default(now())
+  lastMessageAt  DateTime              @default(now())
+  metadata       Json?
+
+  messages AiMessage[]
+
+  @@index([tenantId, eventId])
+}
+
+model AiMessage {
+  id               String         @id @default(uuid()) @db.Uuid
+  conversationId   String         @db.Uuid
+  conversation     AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role             AiMessageRole
+  content          String
+  toolName         String?
+  tokensIn         Int            @default(0)
+  tokensOut        Int            @default(0)
+  retrievedSources Json?
+  createdAt        DateTime       @default(now())
+
+  @@index([conversationId, createdAt])
+}
+
+model AiUsage {
+  id                 String   @id @default(uuid()) @db.Uuid
+  tenantId           String   @db.Uuid
+  tenant             Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  period             String // YYYY-MM
+  tokensIn           Int      @default(0)
+  tokensOut          Int      @default(0)
+  messages           Int      @default(0)
+  estimatedCostCents Int      @default(0)
+  updatedAt          DateTime @updatedAt
+
+  @@unique([tenantId, period])
+}
