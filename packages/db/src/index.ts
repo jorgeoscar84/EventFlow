@@ -26,3 +26,4 @@ export * from './services/registration';
 export * from './services/public';
 export * from './services/checkin';
 export * from './services/messaging';
+export * from './services/payment';

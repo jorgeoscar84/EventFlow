@@ -64,7 +64,11 @@
 - [x] Auto-creación de campañas al publicar evento
 - [x] UI: detalle de evento con funnel + tabla de campañas
 - [x] Verificado contra DB real (4 campañas, materialización, scheduler con envío simulado, logs)
-## Fase 5 — Pagos (M11) · PENDIENTE
+## Fase 5 — Pagos (M11) · HECHO
+- [x] Servicio de pagos: control manual pagó/no pagó + `recordStripePayment` idempotente + resumen/ingresos · verificado contra DB real
+- [x] Stripe: checkout session (`/api/v1/public/payments/checkout`) + webhook idempotente (`/api/v1/webhooks/stripe`)
+- [x] API marcado manual: `PATCH /api/v1/registrations/[id]/payment` (permiso payment:manage)
+- [x] Estructura lista; cobro real requiere `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET`
 ## Fase 6 — Reportes y export (M10) · PENDIENTE
 ## Fase 7 — Sorteos en vivo (M9) · PENDIENTE
 ## Fase 8 — Pulido / SaaS · PENDIENTE
