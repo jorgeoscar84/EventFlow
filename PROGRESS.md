@@ -49,7 +49,14 @@
 - [ ] M13 lógica de eventos digitales (revelado de enlace a confirmados)
 - [ ] Constructor visual de landing (bloques configurables)
 
-## Fase 3 — Check-in QR (M8) · PENDIENTE
+## Fase 3 — Check-in QR (M8) · EN CURSO
+- [x] Servicio de check-in: ok/duplicate/invalid/not_confirmed + aislamiento por tenant + attendance_logs · verificado contra DB real (4 casos + stats)
+- [x] API: `POST /api/v1/checkin/scan` y `GET /api/v1/checkin/[eventId]/stats` (permiso checkin:scan + tenant)
+- [x] PWA de escaneo: cámara (html5-qrcode) + entrada manual de respaldo, feedback verde/ámbar/rojo, contador de asistencia, selector de puerta, vibración
+- [x] Páginas `/checkin` (lista) y `/checkin/[eventId]` (escáner) con guarda de permiso · verificado HTTP (307/401)
+- [x] Manifest PWA + icono (instalable)
+- [ ] Dashboard de check-in en vivo (realtime) — pendiente (hay stats por polling)
+- [ ] Restricción por asignación event_staff (hoy: permiso + tenant)
 ## Fase 4 — Mensajería completa (M7) · PENDIENTE
 ## Fase 5 — Pagos (M11) · PENDIENTE
 ## Fase 6 — Reportes y export (M10) · PENDIENTE

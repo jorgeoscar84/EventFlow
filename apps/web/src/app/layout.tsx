@@ -19,6 +19,12 @@ export const metadata: Metadata = {
   title: 'Eventflow — Plataforma de Eventos',
   description:
     'Crea, promociona y gestiona eventos presenciales y digitales: registro, confirmación, check-in QR, mensajería, sorteos y asistente IA.',
+  manifest: '/manifest.webmanifest',
+  icons: { icon: '/icon.svg' },
+};
+
+export const viewport = {
+  themeColor: '#07070a',
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
