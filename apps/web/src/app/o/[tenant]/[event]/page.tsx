@@ -1,8 +1,9 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getPublicEvent } from '@eventflow/db';
+import { getPublicEvent, getEffectiveAgentConfig } from '@eventflow/db';
 import { Reveal, Stagger, StaggerItem } from '@/components/visual/reveal';
 import { Countdown } from '@/components/visual/countdown';
+import { AssistantWidget } from '@/components/assistant-widget';
 import { formatEventDate, formatEventTime, eventTypeLabel } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
@@ -34,6 +35,7 @@ export default async function PublicEventPage({
   const registerHref = `/o/${tenant}/${eventSlug}/registro`;
   const spotsLeft = event.capacity ? Math.max(0, event.capacity - registeredCount) : null;
   const fillPct = event.capacity ? Math.min(100, Math.round((registeredCount / event.capacity) * 100)) : 0;
+  const agentCfg = await getEffectiveAgentConfig(event.tenantId, event.id);
 
   const benefits = [
     { t: 'Acceso garantizado', d: 'Confirma tu asistencia y asegura tu cupo con un solo toque.' },
@@ -216,6 +218,15 @@ export default async function PublicEventPage({
           Quiero asistir →
         </Link>
       </div>
+
+      {agentCfg.enabled && (
+        <AssistantWidget
+          tenantSlug={tenant}
+          eventSlug={eventSlug}
+          displayName={agentCfg.displayName}
+          welcome={agentCfg.welcomeMessage}
+        />
+      )}
     </div>
   );
 }

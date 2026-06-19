@@ -86,7 +86,15 @@
 - [x] Hardening: cabeceras de seguridad (HSTS, X-Frame-Options, nosniff, Permissions-Policy, Referrer-Policy)
 - [x] Manejo de `PlanLimitError` (402) en API y formularios
 - [ ] i18n completo / dominios personalizados / A/B de landing — backlog
-## Fase 9 — Asistente IA (M14) · PENDIENTE
+## Fase 9 — Asistente IA (M14) · HECHO
+- [x] RAG sobre **pgvector**: embeddings locales deterministas (fallback sin LLM) + búsqueda por similitud coseno
+- [x] Ingesta de conocimiento: datos del evento (auto) + FAQ; aislamiento por tenant/evento · verificado contra DB
+- [x] Chat con **guardarraíles anti-alucinación**: responde solo con conocimiento recuperado; sin match confiable → fallback honesto
+- [x] Config con herencia tenant→evento; persistencia de conversaciones + uso (AiUsage)
+- [x] API pública `/api/v1/public/ai/chat` + panel `/dashboard/events/[id]/asistente` (activar, reindexar, FAQ)
+- [x] **Widget de chat** premium en la landing pública (Framer Motion)
+- [x] Verificado por HTTP: respuestas grounded + fallback para fuera de alcance + aislamiento
+- [ ] Proveedor LLM real (OpenAI/Anthropic) — hook listo, requiere `LLM_API_KEY`
 
 ---
 
