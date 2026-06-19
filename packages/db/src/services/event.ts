@@ -1,6 +1,7 @@
 import { prisma } from '../index';
 import type { Prisma, EventStatus, EventType } from '@prisma/client';
 import { isValidSlug } from '@eventflow/core';
+import { setupDefaultCampaigns } from './messaging';
 
 /** Genera un slug a partir de un título. */
 export function slugify(input: string): string {
@@ -131,10 +132,13 @@ export async function updateEvent(
 export async function publishEvent(tenantId: string, id: string) {
   const existing = await prisma.event.findFirst({ where: { tenantId, id }, select: { id: true } });
   if (!existing) return null;
-  return prisma.event.update({
+  const event = await prisma.event.update({
     where: { id },
     data: { status: 'published', publishedAt: new Date() },
   });
+  // Crea las campañas estándar (reconfirmación + recordatorios + agradecimiento).
+  await setupDefaultCampaigns(tenantId, id);
+  return event;
 }
 
 /** Funnel de un evento: registrados / confirmados / asistieron / no-show. PRD M10. */

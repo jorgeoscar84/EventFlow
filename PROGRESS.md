@@ -57,7 +57,13 @@
 - [x] Manifest PWA + icono (instalable)
 - [ ] Dashboard de check-in en vivo (realtime) — pendiente (hay stats por polling)
 - [ ] Restricción por asignación event_staff (hoy: permiso + tenant)
-## Fase 4 — Mensajería completa (M7) · PENDIENTE
+## Fase 4 — Mensajería completa (M7) · HECHO
+- [x] Plantillas por defecto (reconfirm, reminder_24h, reminder_1h, thank_you) con variables
+- [x] Campañas + materialización de envíos por audiencia (estado) + idempotencia
+- [x] Scheduler por **DB-polling** en el worker (mejora: sin dependencia de Redis) + envío SES best-effort
+- [x] Auto-creación de campañas al publicar evento
+- [x] UI: detalle de evento con funnel + tabla de campañas
+- [x] Verificado contra DB real (4 campañas, materialización, scheduler con envío simulado, logs)
 ## Fase 5 — Pagos (M11) · PENDIENTE
 ## Fase 6 — Reportes y export (M10) · PENDIENTE
 ## Fase 7 — Sorteos en vivo (M9) · PENDIENTE
