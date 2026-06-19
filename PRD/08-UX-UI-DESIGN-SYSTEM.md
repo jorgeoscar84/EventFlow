@@ -56,3 +56,8 @@ Botones, inputs, selects, date/time pickers, tablas con filtros y columnas confi
 - CA-08.2: Dark mode y branding por tenant funcionan en público y admin.
 - CA-08.3: La landing cumple Core Web Vitals "good" en móvil.
 - CA-08.4: El sorteo corre fluido en pantalla grande con audio + confeti y control de re-sorteo.
+
+
+---
+
+> **Actualización de implementación (ver `13`):** sistema visual premium aplicado — **Fraunces** (serif display variable) + **Inter**, textura de **grano** + **aurora**, microanimaciones con **framer-motion**, countdown animado, widget de chat y "show" de sorteo con **canvas-confetti** + Web Audio. Páginas públicas con routing por ruta `/o/{tenant}/{evento}`. Acento por tenant inyectado vía CSS variables desde el branding.

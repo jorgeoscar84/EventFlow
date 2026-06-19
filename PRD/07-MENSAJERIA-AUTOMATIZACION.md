@@ -74,3 +74,8 @@ El `WHATSAPP_PROVIDER` (env / `integrations`) decide la implementación. **Email
 - CA-07.2: Campaña "reconfirmar 24h antes a registrados" se planifica y entrega sin duplicados.
 - CA-07.3: Bounces/complaints de SES se registran y se suprime el reenvío a esa dirección.
 - CA-07.4: El sistema de providers permite activar WhatsApp solo configurando credenciales (sin tocar el core).
+
+
+---
+
+> **Actualización de implementación (ver `13`):** el procesamiento se realiza con un **scheduler por sondeo de base de datos** (cada 60s materializa campañas y procesa envíos vencidos) en `apps/worker`, en lugar de BullMQ/Redis, para reducir infraestructura y coste. El envío por SES es best-effort. BullMQ/Redis queda como opción para alta escala.

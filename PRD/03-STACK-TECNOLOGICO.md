@@ -123,3 +123,8 @@ EMBEDDINGS_MODEL=
 # Observabilidad
 SENTRY_DSN=
 ```
+
+
+---
+
+> **Actualización de implementación (ver `13-CAMBIOS-IMPLEMENTACION.md`):** el motor de recordatorios se implementó como **scheduler por DB-polling** en `apps/worker` (sin Redis/BullMQ para el MVP). Tipografía premium **Fraunces + Inter**. Animaciones con **framer-motion**, **canvas-confetti** y Web Audio. Versiones reales fijadas: Node 22 LTS, Next.js 15, Prisma 6, pgvector.

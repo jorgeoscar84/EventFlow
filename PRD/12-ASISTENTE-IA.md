@@ -194,3 +194,8 @@ GET      /api/v1/events/:id/ai/analytics         # nº conversaciones, deflexió
 - CA-M14.5: Acciones sensibles (ver estado de registro, reenviar QR) exigen verificación de identidad.
 - CA-M14.6: Se puede cambiar de proveedor/modelo de LLM sin cambios en el producto (abstracción).
 - CA-M14.7: El consumo se mide en `ai_usage` y respeta los límites del plan (cuota → `402`).
+
+
+---
+
+> **Actualización de implementación (ver `13`):** RAG sobre **pgvector** operativo. Para funcionar sin clave de LLM se usa un **embedding local determinista** (1536 dims) + respuestas **extractivas grounded**; sin match confiable el agente admite que no sabe (guardarraíl verificado). La capa de proveedor LLM es un hook activable con `LLM_API_KEY`. Aislamiento por tenant/evento verificado.

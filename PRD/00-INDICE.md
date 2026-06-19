@@ -34,6 +34,7 @@
 | `10-GUIA-EJECUCION-IA.md` | Protocolo multiagente, anti-alucinación, QA gates, Definition of Done. |
 | `11-ROADMAP.md` | Fases, entregables y secuencia de construcción. |
 | `12-ASISTENTE-IA.md` | Asistente conversacional LLM configurable por cuenta/evento (RAG, guardarraíles, tools). |
+| `13-CAMBIOS-IMPLEMENTACION.md` | **Mejoras y decisiones adoptadas en la construcción real** (visual premium, routing público, scheduler DB-polling, branding, IA con embeddings locales) + estado por fase. |
 
 ---
 
