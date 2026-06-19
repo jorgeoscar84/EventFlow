@@ -1,16 +1,24 @@
 import { prisma } from '../index';
 import { randomUUID } from 'node:crypto';
+import OpenAI from 'openai';
 import type { Prisma } from '@prisma/client';
 
 /**
- * Asistente IA conversacional (PRD M14 / doc 12).
- * RAG sobre pgvector con guardarraíles anti-alucinación: el agente sólo responde
- * con conocimiento recuperado + datos del evento; si no hay match confiable, lo admite.
+ * Asistente IA conversacional (PRD M14 / doc 12 + 13).
  *
- * Embeddings: si LLM_API_KEY está configurado se usaría el proveedor (hook listo);
- * por defecto se usa un embedding local determinista (bag-of-words hasheado),
- * suficiente para recuperación por solapamiento de términos y 100% offline.
+ * Modos de operación:
+ * 1. EXTRACTIVO (por defecto / sin LLM): responde con los fragmentos recuperados.
+ *    Funciona offline, sin API key. Guardarraíl: sin match → fallback honesto.
+ *
+ * 2. CONVERSACIONAL (con LLM configurado): usa cualquier proveedor OpenAI-compatible
+ *    (OpenRouter, OpenAI, Azure OpenAI, Ollama local, etc.) con los fragmentos como
+ *    contexto del sistema. El LLM NO puede alucinar: sólo ve el contexto recuperado.
+ *
+ * Configuración: tabla `integrations` del tenant, tipo `llm_openai_compatible`.
+ * Editable desde /dashboard/settings → "Inteligencia Artificial".
  */
+
+// ───────── Embeddings locales (siempre disponibles) ─────────
 const DIM = 1536;
 const MATCH_THRESHOLD = 0.18;
 
@@ -50,7 +58,71 @@ function toVectorLiteral(v: number[]): string {
   return `[${v.join(',')}]`;
 }
 
-// ───────── Configuración (herencia tenant → evento) ─────────
+// ───────── Configuración LLM del tenant ─────────
+
+export interface LlmConfig {
+  baseUrl: string;       // ej. https://openrouter.ai/api/v1
+  apiKey: string;        // clave del proveedor
+  model: string;         // ej. gpt-4o-mini, anthropic/claude-3.5-sonnet
+  embeddingModel?: string; // opcional; fallback a embedLocal si no hay
+  maxTokens?: number;
+  temperature?: number;
+}
+
+export async function getTenantLlmConfig(tenantId: string): Promise<LlmConfig | null> {
+  const integration = await prisma.integration.findFirst({
+    where: { tenantId, type: 'llm_openai_compatible', isActive: true },
+  });
+  if (!integration) return null;
+  const cfg = integration.config as unknown as LlmConfig;
+  if (!cfg.apiKey || !cfg.model || !cfg.baseUrl) return null;
+  return cfg;
+}
+
+export async function saveTenantLlmConfig(tenantId: string, config: LlmConfig | null) {
+  if (!config) {
+    await prisma.integration.updateMany({
+      where: { tenantId, type: 'llm_openai_compatible' },
+      data: { isActive: false },
+    });
+    return;
+  }
+  const configJson = config as unknown as Prisma.InputJsonValue;
+  await prisma.integration.upsert({
+    where: { tenantId_type: { tenantId, type: 'llm_openai_compatible' } },
+    update: { config: configJson, isActive: true },
+    create: {
+      tenantId,
+      type: 'llm_openai_compatible',
+      config: configJson,
+      isActive: true,
+    },
+  });
+}
+
+function buildLlmClient(cfg: LlmConfig): OpenAI {
+  return new OpenAI({
+    apiKey: cfg.apiKey,
+    baseURL: cfg.baseUrl,
+    defaultHeaders: {
+      // OpenRouter requiere estas cabeceras opcionales para rastreo y ranking.
+      'HTTP-Referer': 'https://eventflow.app',
+      'X-Title': 'Eventflow Assistant',
+    },
+  });
+}
+
+// ───────── Presets de proveedores conocidos ─────────
+
+export const LLM_PRESETS: { name: string; baseUrl: string; exampleModel: string }[] = [
+  { name: 'OpenRouter', baseUrl: 'https://openrouter.ai/api/v1', exampleModel: 'openai/gpt-4o-mini' },
+  { name: 'OpenAI', baseUrl: 'https://api.openai.com/v1', exampleModel: 'gpt-4o-mini' },
+  { name: 'Azure OpenAI', baseUrl: 'https://{resource}.openai.azure.com/openai/deployments/{deployment}', exampleModel: 'gpt-4o' },
+  { name: 'Groq', baseUrl: 'https://api.groq.com/openai/v1', exampleModel: 'llama-3.3-70b-versatile' },
+  { name: 'Ollama (local)', baseUrl: 'http://localhost:11434/v1', exampleModel: 'llama3.2' },
+];
+
+// ───────── Configuración del agente (herencia tenant → evento) ─────────
 
 export interface EffectiveAgentConfig {
   enabled: boolean;
@@ -126,12 +198,10 @@ async function indexChunk(params: {
   );
 }
 
-/** Genera/actualiza el conocimiento automático a partir de los datos del evento. */
 export async function ingestEventKnowledge(tenantId: string, eventId: string): Promise<number> {
   const event = await prisma.event.findFirst({ where: { id: eventId, tenantId } });
   if (!event) return 0;
 
-  // Reemplaza la fuente auto_event previa.
   const prev = await prisma.aiKnowledgeSource.findFirst({
     where: { tenantId, eventId, type: 'auto_event' },
   });
@@ -141,32 +211,47 @@ export async function ingestEventKnowledge(tenantId: string, eventId: string): P
   }
 
   const source = await prisma.aiKnowledgeSource.create({
-    data: { tenantId, eventId, type: 'auto_event', title: 'Datos del evento', status: 'active', lastIndexedAt: new Date() },
+    data: {
+      tenantId, eventId, type: 'auto_event',
+      title: 'Datos del evento', status: 'active', lastIndexedAt: new Date(),
+    },
   });
 
-  const fecha = new Intl.DateTimeFormat('es', { dateStyle: 'full', timeStyle: 'short', timeZone: event.timezone }).format(event.startsAt);
+  const fecha = new Intl.DateTimeFormat('es', {
+    dateStyle: 'full', timeStyle: 'short', timeZone: event.timezone,
+  }).format(event.startsAt);
+
   const facts: string[] = [
     `Nombre del evento: ${event.title}.`,
     event.description ? `De qué trata: ${event.description}` : '',
     `¿Cuándo es? Fecha y hora del evento: ${fecha} (zona horaria ${event.timezone}).`,
     event.type === 'digital'
       ? '¿Dónde es? Es un evento online/virtual. El enlace de acceso se envía por correo al confirmar la asistencia.'
-      : `¿Dónde es? Ubicación y lugar del evento: ${event.locationName ?? 'por confirmar'}${event.locationAddress ? ', dirección ' + event.locationAddress : ''}.`,
-    event.capacity ? `¿Cuántos cupos hay? Aforo y capacidad: ${event.capacity} personas.` : '',
-    event.requiresConfirmation ? '¿Cómo aseguro mi lugar? Debes confirmar tu asistencia tras registrarte.' : '',
-    '¿Cómo me registro o inscribo? Para asistir necesitas registrarte; recibirás un pase con código QR para la entrada.',
-    `¿Cuánto cuesta? ${event.requiresPayment ? 'Este evento requiere pago según el tipo de entrada.' : 'El registro a este evento es gratuito.'}`,
+      : `¿Dónde es? Lugar del evento: ${event.locationName ?? 'por confirmar'}${event.locationAddress ? ', ' + event.locationAddress : ''}.`,
+    event.capacity ? `¿Cuántos cupos hay? Aforo: ${event.capacity} personas.` : '',
+    event.requiresConfirmation
+      ? '¿Cómo aseguro mi lugar? Debes confirmar tu asistencia tras registrarte.' : '',
+    '¿Cómo me registro? Para asistir necesitas registrarte; recibirás un pase con código QR.',
+    `¿Cuánto cuesta? ${event.requiresPayment ? 'Requiere pago según el tipo de entrada.' : 'El registro es gratuito.'}`,
   ].filter(Boolean);
 
   for (const f of facts) await indexChunk({ tenantId, eventId, sourceId: source.id, content: f });
   return facts.length;
 }
 
-export async function addFaq(tenantId: string, eventId: string, question: string, answer: string) {
+export async function addFaq(
+  tenantId: string, eventId: string, question: string, answer: string,
+) {
   const source = await prisma.aiKnowledgeSource.create({
-    data: { tenantId, eventId, type: 'faq', title: question.slice(0, 80), status: 'active', lastIndexedAt: new Date() },
+    data: {
+      tenantId, eventId, type: 'faq',
+      title: question.slice(0, 80), status: 'active', lastIndexedAt: new Date(),
+    },
   });
-  await indexChunk({ tenantId, eventId, sourceId: source.id, content: `Pregunta: ${question}\nRespuesta: ${answer}` });
+  await indexChunk({
+    tenantId, eventId, sourceId: source.id,
+    content: `Pregunta: ${question}\nRespuesta: ${answer}`,
+  });
   return source;
 }
 
@@ -178,18 +263,12 @@ export async function listKnowledge(tenantId: string, eventId: string) {
   });
 }
 
-// ───────── Recuperación + chat ─────────
+// ───────── Recuperación semántica ─────────
 
-interface RetrievedChunk {
-  content: string;
-  score: number;
-}
+interface RetrievedChunk { content: string; score: number; }
 
 export async function retrieve(
-  tenantId: string,
-  eventId: string,
-  query: string,
-  k = 4,
+  tenantId: string, eventId: string, query: string, k = 5,
 ): Promise<RetrievedChunk[]> {
   const vec = toVectorLiteral(embedLocal(query));
   const rows = await prisma.$queryRawUnsafe<{ content: string; score: number }[]>(
@@ -198,24 +277,26 @@ export async function retrieve(
      WHERE "tenantId" = $2::uuid AND "eventId" = $3::uuid AND embedding IS NOT NULL
      ORDER BY embedding <=> $1::vector
      LIMIT $4::int`,
-    vec,
-    tenantId,
-    eventId,
-    k,
+    vec, tenantId, eventId, k,
   );
   return rows.map((r) => ({ content: r.content, score: Number(r.score) }));
 }
+
+// ───────── Chat con RAG y guardarraíles ─────────
 
 export interface ChatResult {
   conversationId: string;
   reply: string;
   grounded: boolean;
+  mode: 'llm' | 'extractive' | 'fallback';
   sources: string[];
 }
 
 /**
- * Responde una pregunta con RAG + guardarraíles. Sin match confiable → fallback honesto.
- * Modo extractivo (sin LLM): compone la respuesta con los fragmentos recuperados.
+ * Responde con RAG. Modos:
+ * - 'llm': LLM configurado y match confiable → respuesta conversacional grounded
+ * - 'extractive': sin LLM y match confiable → respuesta con los fragmentos directamente
+ * - 'fallback': sin match confiable → mensaje honesto predefinido
  */
 export async function chat(params: {
   tenantId: string;
@@ -223,20 +304,69 @@ export async function chat(params: {
   message: string;
   conversationId?: string;
 }): Promise<ChatResult> {
-  const cfg = await getEffectiveAgentConfig(params.tenantId, params.eventId);
-  const hits = await retrieve(params.tenantId, params.eventId, params.message);
-  const top = hits[0];
-  const grounded = !!top && top.score >= MATCH_THRESHOLD;
+  const [agentCfg, llmCfg, hits] = await Promise.all([
+    getEffectiveAgentConfig(params.tenantId, params.eventId),
+    getTenantLlmConfig(params.tenantId),
+    retrieve(params.tenantId, params.eventId, params.message),
+  ]);
 
-  const reply = grounded
-    ? hits
-        .filter((h) => h.score >= MATCH_THRESHOLD)
-        .slice(0, 2)
+  const relevantHits = hits.filter((h) => h.score >= MATCH_THRESHOLD);
+  const grounded = relevantHits.length > 0;
+
+  let reply: string;
+  let mode: ChatResult['mode'];
+
+  if (!grounded) {
+    reply = agentCfg.fallbackMessage;
+    mode = 'fallback';
+  } else if (llmCfg) {
+    // Modo conversacional con guardarraíl: el LLM solo ve el contexto recuperado.
+    try {
+      const context = relevantHits
+        .slice(0, 4)
+        .map((h, i) => `[${i + 1}] ${h.content}`)
+        .join('\n');
+      const systemPrompt = [
+        `Eres el asistente oficial del evento "${(await prisma.event.findUnique({ where: { id: params.eventId }, select: { title: true } }))?.title ?? 'este evento'}".`,
+        `Responde ÚNICAMENTE basándote en el siguiente contexto. Si no encuentras la respuesta en el contexto, dilo honestamente.`,
+        `Responde en el mismo idioma que la pregunta. Sé conciso y amable.`,
+        agentCfg.persona ? `Tono y personalidad: ${agentCfg.persona}` : '',
+        '',
+        `CONTEXTO:`,
+        context,
+        '',
+        `INSTRUCCIÓN: No inventes información que no esté en el contexto.`,
+      ].filter((l) => l !== null).join('\n');
+
+      const client = buildLlmClient(llmCfg);
+      const response = await client.chat.completions.create({
+        model: llmCfg.model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: params.message },
+        ],
+        max_tokens: llmCfg.maxTokens ?? 400,
+        temperature: llmCfg.temperature ?? 0.3,
+      });
+      reply = response.choices[0]?.message?.content?.trim() ?? agentCfg.fallbackMessage;
+      mode = 'llm';
+    } catch (e) {
+      // Si el LLM falla, cae a modo extractivo (no rompe la experiencia).
+      console.error('[ai] LLM error, fallback extractivo:', e);
+      reply = relevantHits.slice(0, 2)
         .map((h) => h.content.replace(/^Pregunta:.*\nRespuesta:\s*/s, ''))
-        .join(' ')
-    : cfg.fallbackMessage;
+        .join(' ');
+      mode = 'extractive';
+    }
+  } else {
+    // Modo extractivo (sin LLM).
+    reply = relevantHits.slice(0, 2)
+      .map((h) => h.content.replace(/^Pregunta:.*\nRespuesta:\s*/s, ''))
+      .join(' ');
+    mode = 'extractive';
+  }
 
-  // Persistencia de la conversación + uso.
+  // Persistencia.
   let conversationId = params.conversationId;
   if (!conversationId) {
     const conv = await prisma.aiConversation.create({
@@ -244,20 +374,32 @@ export async function chat(params: {
     });
     conversationId = conv.id;
   }
+  const tokIn = tokenize(params.message).length;
+  const tokOut = tokenize(reply).length;
   await prisma.aiMessage.createMany({
     data: [
-      { conversationId, role: 'user', content: params.message, tokensIn: tokenize(params.message).length },
-      { conversationId, role: 'assistant', content: reply, tokensOut: tokenize(reply).length, retrievedSources: hits.map((h) => h.score) as Prisma.InputJsonValue },
+      { conversationId, role: 'user', content: params.message, tokensIn: tokIn },
+      {
+        conversationId, role: 'assistant', content: reply, tokensOut: tokOut,
+        retrievedSources: relevantHits.map((h) => h.score) as Prisma.InputJsonValue,
+      },
     ],
   });
-  await prisma.aiConversation.update({ where: { id: conversationId }, data: { lastMessageAt: new Date() } });
-
+  await prisma.aiConversation.update({
+    where: { id: conversationId }, data: { lastMessageAt: new Date() },
+  });
   const period = new Date().toISOString().slice(0, 7);
   await prisma.aiUsage.upsert({
     where: { tenantId_period: { tenantId: params.tenantId, period } },
-    update: { messages: { increment: 1 }, tokensIn: { increment: tokenize(params.message).length }, tokensOut: { increment: tokenize(reply).length } },
-    create: { tenantId: params.tenantId, period, messages: 1, tokensIn: tokenize(params.message).length, tokensOut: tokenize(reply).length },
+    update: { messages: { increment: 1 }, tokensIn: { increment: tokIn }, tokensOut: { increment: tokOut } },
+    create: { tenantId: params.tenantId, period, messages: 1, tokensIn: tokIn, tokensOut: tokOut },
   });
 
-  return { conversationId, reply, grounded, sources: hits.map((h) => h.content.slice(0, 60)) };
+  return {
+    conversationId,
+    reply,
+    grounded,
+    mode,
+    sources: relevantHits.map((h) => h.content.slice(0, 60)),
+  };
 }

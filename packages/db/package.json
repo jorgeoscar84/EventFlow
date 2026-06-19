@@ -9,6 +9,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
+    "build": "prisma generate",
     "generate": "prisma generate",
     "migrate": "prisma migrate dev",
     "migrate:deploy": "prisma migrate deploy",
@@ -18,7 +19,8 @@
   "dependencies": {
     "@eventflow/core": "workspace:*",
     "@prisma/client": "^6.2.1",
-    "@supabase/supabase-js": "^2.47.10"
+    "@supabase/supabase-js": "^2.47.10",
+    "openai": "^4.79.1"
   },
   "devDependencies": {
     "@eventflow/config": "workspace:*",

@@ -1,0 +1,10 @@
+# No subir a Vercel
+.pnpm-store/
+node_modules/
+packages/db/prisma/migrations/
+packages/db/scripts/
+apps/worker/
+PRD/
+*.md
+!README.md
+!DEPLOY.md

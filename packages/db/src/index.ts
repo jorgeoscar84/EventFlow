@@ -31,3 +31,5 @@ export * from './services/report';
 export * from './services/raffle';
 export * from './services/plan';
 export * from './services/ai';
+export type { LlmConfig } from './services/ai';
+export { LLM_PRESETS } from './services/ai';

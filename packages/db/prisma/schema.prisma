@@ -144,6 +144,7 @@ enum IntegrationType {
   llm_openai
   llm_anthropic
   llm_azure
+  llm_openai_compatible
 }
 
 enum RaffleStatus {
