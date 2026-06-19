@@ -44,6 +44,12 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
         action={
           <div className="flex items-center gap-3">
             <Link
+              href={`/dashboard/events/${event.id}/sorteos`}
+              className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm hover:bg-white/10"
+            >
+              Sorteos
+            </Link>
+            <Link
               href={`/dashboard/events/${event.id}/registros`}
               className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm hover:bg-white/10"
             >

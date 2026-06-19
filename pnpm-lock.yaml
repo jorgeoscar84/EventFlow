@@ -35,6 +35,9 @@ importers:
       '@supabase/supabase-js':
         specifier: ^2.47.10
         version: 2.108.2
+      canvas-confetti:
+        specifier: ^1.9.3
+        version: 1.9.4
       dotenv:
         specifier: ^16.4.7
         version: 16.6.1
@@ -78,6 +81,9 @@ importers:
       '@tailwindcss/postcss':
         specifier: ^4.0.0
         version: 4.3.1
+      '@types/canvas-confetti':
+        specifier: ^1.6.4
+        version: 1.9.0
       '@types/node':
         specifier: ^22.10.2
         version: 22.19.21
@@ -1017,6 +1023,9 @@ packages:
     cpu: [arm64]
     os: [win32]
 
+  '@types/canvas-confetti@1.9.0':
+    resolution: {integrity: sha512-aBGj/dULrimR1XDZLtG9JwxX1b4HPRF6CX9Yfwh3NvstZEm1ZL7RBnel4keCPSqs1ANRu1u2Aoz9R+VmtjYuTg==}
+
   '@types/cookie@0.6.0':
     resolution: {integrity: sha512-4Kh9a6B2bQciAhf7FSuMRRkUWecJgJu9nPnx3yzpsfXX/c50REIqpHY4C82bXP90qrLtXtkDxTZosYO3UpOwlA==}
 
@@ -1164,6 +1173,9 @@ packages:
 
   caniuse-lite@1.0.30001799:
     resolution: {integrity: sha512-hG1bReV+OUU+MOqK4t/ZWI0tZOyz3rqS9XuhOUz1cIcbwBKjOyJEJuw9ER5JuNyqxNk8u/JUVbGibBOL1yrjFw==}
+
+  canvas-confetti@1.9.4:
+    resolution: {integrity: sha512-yxQbJkAVrFXWNbTUjPqjF7G+g6pDotOUHGbkZq2NELZUMDpiJ85rIEazVb8GTaAptNW2miJAXbs1BtioA251Pw==}
 
   chai@5.3.3:
     resolution: {integrity: sha512-4zNhdJD/iOjSH0A05ea+Ke6MU5mmpQcbQsSOkgdaUMJ9zTlDTD/GYlwohmIE2u0gaxHYiVHEn1Fw9mZ/ktJWgw==}
@@ -2610,6 +2622,8 @@ snapshots:
   '@turbo/windows-arm64@2.9.18':
     optional: true
 
+  '@types/canvas-confetti@1.9.0': {}
+
   '@types/cookie@0.6.0': {}
 
   '@types/estree@1.0.9': {}
@@ -2791,6 +2805,8 @@ snapshots:
   camelcase@5.3.1: {}
 
   caniuse-lite@1.0.30001799: {}
+
+  canvas-confetti@1.9.4: {}
 
   chai@5.3.3:
     dependencies:

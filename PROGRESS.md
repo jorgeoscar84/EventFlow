@@ -74,7 +74,11 @@
 - [x] Export CSV (BOM) y Excel (.xlsx con exceljs) con todas las columnas: datos base, campos personalizados, estado, pago, check-in
 - [x] API: `GET /events/[id]/registrations` y `GET /events/[id]/export?format=csv|xlsx`
 - [x] UI: `/dashboard/events/[id]/registros` con filtros, toggle de pago manual y botones de export
-## Fase 7 — Sorteos en vivo (M9) · PENDIENTE
+## Fase 7 — Sorteos en vivo (M9) · HECHO
+- [x] Servicio de sorteo con **semilla auditable** (pickWinner determinista), rondas, presencia y re-sorteo · verificado contra DB
+- [x] API: crear sorteo + `draw`/`redraw` (permiso raffle:run)
+- [x] Config UI: `/dashboard/events/[id]/sorteos` (nombre, nº ganadores, premios, requiere presencia, incluir confirmados)
+- [x] **Pantalla del show** (`/sorteo/[raffleId]`): bombo animado (Framer Motion), tambores (Web Audio), **confeti** (canvas-confetti), control presente/ausente + re-sorteo, siguiente premio, resumen de ganadores
 ## Fase 8 — Pulido / SaaS · PENDIENTE
 ## Fase 9 — Asistente IA (M14) · PENDIENTE
 
