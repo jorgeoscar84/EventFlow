@@ -34,7 +34,13 @@
 - **Decisión:** **PostgreSQL** (gestionado vía **Supabase**: Auth + Storage + Realtime + RLS) + **Prisma** ORM. **pgvector** para RAG del asistente IA.
 - **Motivo:** datos relacionales, reporting, aislamiento multi-tenant por RLS, realtime para sorteo/check-in, bajo coste inicial, sin lock-in (Postgres estándar).
 - **Alternativas:** Appwrite self-hosted (limita reporting), MongoDB (no relacional), Baserow (no transaccional).
-- **Estado:** Aceptada. **PENDIENTE de confirmar despliegue:** Supabase cloud vs Supabase self-host (ver QUESTIONS Q-01).
+- **Estado:** Aceptada. **Despliegue confirmado:** Supabase cloud, proyecto `uyhsitbpwygteumjpzfl`, región **us-west-2**. Conexión vía **pooler IPv4** (el host directo `db.*.supabase.co` es solo IPv6 y el sandbox no tiene IPv6): app en pooler transacción `:6543?pgbouncer=true`, migraciones en pooler sesión `:5432`.
+
+### ADR-009 · RLS y rol de conexión
+- **Fecha:** 2026-06-19
+- **Decisión:** Habilitar RLS + políticas `tenant_isolation` en todas las tablas con `tenantId`. La **primera línea de defensa** es el filtrado por `tenantId` en la capa de aplicación (`packages/core` + `packages/db/tenant-context`).
+- **Motivo:** Prisma se conecta con el rol propietario (`postgres`), que por defecto ignora RLS. Las políticas quedan activas para cuando se introduzca un rol restringido (fase de hardening). No se usa `FORCE` para no romper worker/superadmin.
+- **Estado:** Aceptada.
 
 ### ADR-006 · Colas y jobs
 - **Fecha:** 2026-06-19

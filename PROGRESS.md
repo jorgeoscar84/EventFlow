@@ -9,21 +9,24 @@
 - [x] `packages/config`, `packages/core`, `packages/ui` mínimos
 - [x] `apps/web` (Next.js + Tailwind v4 + TS estricto) con landing placeholder + health route
 - [x] `apps/worker` (stub BullMQ)
-- [ ] Conexión real a Postgres + primera migración + RLS base + seeds (requiere credenciales — Q-01)
-- [ ] Auth + resolución de tenant por subdominio
+- [x] Conexión real a Postgres + primera migración + RLS base + seeds (Supabase us-west-2, pooler IPv4)
+- [ ] Auth + resolución de tenant por subdominio (resolución hecha; falta login/sesión)
 - [x] Verificación: `pnpm install` + `typecheck`/`build`
 
-**Salida esperada:** "hello tenant" — login, sesión con `tenant_id`, RLS probada. *(Auth/RLS pendientes de credenciales de DB.)*
+**Salida esperada:** "hello tenant" — login, sesión con `tenant_id`, RLS probada. *(Migración + RLS + seeds aplicados y verificados; falta el login.)*
 
 ## Fase 1 — Núcleo Multi-Tenant · EN CURSO
 - [x] RBAC: catálogo de permisos + roles de sistema + helpers (`packages/core/rbac.ts`) + tests
 - [x] Resolución de tenant por host/subdominio (`packages/core/tenant.ts`) + tests
 - [x] Middleware de tenant en web (`apps/web/middleware.ts`, header `x-tenant-slug`)
 - [x] Tokens firmados HMAC para QR/confirmación (`apps/web/lib/tokens.ts`)
-- [ ] M1 Auth (login/sesión) — requiere credenciales Supabase (Q-01)
-- [ ] M2 Super Admin (tenants, planes) — requiere DB
-- [ ] M12 Equipo y roles — requiere DB
-- [ ] M3 Gestión de eventos (CRUD + wizard) — requiere DB
+- [x] Migración inicial aplicada (~35 tablas) + extensiones pgcrypto/vector + RLS + seeds (Supabase us-west-2)
+- [x] M2 (base): servicio de aprovisionamiento de tenant (`provisionTenant`) — crea tenant + roles de sistema + permisos + admin · verificado contra DB real
+- [x] Contexto de tenant para Prisma (`withTenant`, set app.tenant_id)
+- [ ] M1 Auth (login/sesión con Supabase Auth) — EN CURSO
+- [ ] M2 Panel Super Admin (UI tenants/planes)
+- [ ] M12 Equipo y roles (UI)
+- [ ] M3 Gestión de eventos (CRUD + wizard)
 - [ ] Branding por tenant
 
 ## Fase 2 — Público + Registro + Confirmación · PENDIENTE
