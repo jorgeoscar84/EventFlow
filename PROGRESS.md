@@ -69,7 +69,11 @@
 - [x] Stripe: checkout session (`/api/v1/public/payments/checkout`) + webhook idempotente (`/api/v1/webhooks/stripe`)
 - [x] API marcado manual: `PATCH /api/v1/registrations/[id]/payment` (permiso payment:manage)
 - [x] Estructura lista; cobro real requiere `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET`
-## Fase 6 — Reportes y export (M10) · PENDIENTE
+## Fase 6 — Reportes y export (M10) · HECHO
+- [x] Servicio de reportes: tabla filtrable (estado, pago, búsqueda) + funnel + campos personalizados · verificado contra DB
+- [x] Export CSV (BOM) y Excel (.xlsx con exceljs) con todas las columnas: datos base, campos personalizados, estado, pago, check-in
+- [x] API: `GET /events/[id]/registrations` y `GET /events/[id]/export?format=csv|xlsx`
+- [x] UI: `/dashboard/events/[id]/registros` con filtros, toggle de pago manual y botones de export
 ## Fase 7 — Sorteos en vivo (M9) · PENDIENTE
 ## Fase 8 — Pulido / SaaS · PENDIENTE
 ## Fase 9 — Asistente IA (M14) · PENDIENTE

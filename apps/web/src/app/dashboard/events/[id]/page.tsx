@@ -41,7 +41,17 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
       <PageHeader
         title={event.title}
         description={`${formatEventDate(event.startsAt, event.timezone)} · ${event.locationName ?? 'Online'}`}
-        action={<Badge kind={event.status}>{event.status}</Badge>}
+        action={
+          <div className="flex items-center gap-3">
+            <Link
+              href={`/dashboard/events/${event.id}/registros`}
+              className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm hover:bg-white/10"
+            >
+              Ver registros
+            </Link>
+            <Badge kind={event.status}>{event.status}</Badge>
+          </div>
+        }
       />
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
