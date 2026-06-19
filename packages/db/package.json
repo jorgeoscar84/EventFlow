@@ -17,7 +17,8 @@
   },
   "dependencies": {
     "@eventflow/core": "workspace:*",
-    "@prisma/client": "^6.2.1"
+    "@prisma/client": "^6.2.1",
+    "@supabase/supabase-js": "^2.47.10"
   },
   "devDependencies": {
     "@eventflow/config": "workspace:*",

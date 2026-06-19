@@ -26,10 +26,16 @@
 - [x] M1 (base): Supabase Auth server client + `getCurrentUser`/`requireUser`/`requireSuperAdmin`/`requirePermission`
 - [x] M3 (servicio+API): eventos CRUD (`createEvent` con slug único, `listEvents`, `getEvent`, `updateEvent`, `publishEvent`, `getEventStats`) + endpoints `GET/POST /api/v1/events`, `GET/PATCH /api/v1/events/[id]`, `POST .../publish` · verificado contra DB real (incl. aislamiento entre tenants)
 - [x] Contexto de tenant para Prisma (`withTenant`, set app.tenant_id)
-- [ ] M1 Auth UI (páginas login/logout) — EN CURSO
-- [ ] M2 Panel Super Admin (UI)
-- [ ] M3 Wizard de eventos (UI)
-- [ ] Branding por tenant
+- [x] M1 Auth UI: páginas login (Supabase Auth) + logout + guardas de sesión en layouts · verificado por HTTP (307/401)
+- [x] M2 Panel Super Admin (UI): lista de empresas + alta de empresa (crea tenant + usuario Auth con contraseña temporal)
+- [x] M3 Panel organizador (UI): lista de eventos + formulario de creación
+- [x] Design system base (Button, Input, Card, Badge, AppShell) estilo minimalista/tech
+- [x] Bootstrap de Super Admin (`scripts/bootstrap-superadmin.ts`) + carga de .env raíz en Next
+- [ ] M12 Equipo y roles (UI) — pendiente
+- [ ] Branding por tenant — pendiente
+- [ ] M3 Wizard multi-paso + edición avanzada — pendiente (form básico hecho)
+
+**Fase 1 funcionalmente operativa:** login → super admin crea empresa → admin de empresa entra y crea eventos. Verificado: arranque del server, guardas (307/401), servicios y aislamiento contra DB real.
 
 ## Fase 2 — Público + Registro + Confirmación · PENDIENTE
 - [ ] M4 Landing + página de evento · M5 Registro · M6 Confirmación · M7(parcial) Email SES · M13 digital
