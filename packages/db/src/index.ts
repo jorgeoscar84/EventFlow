@@ -20,3 +20,5 @@ if (process.env.NODE_ENV !== 'production') {
 export * from '@prisma/client';
 export * from './tenant-context';
 export * from './services/tenant';
+export * from './services/event';
+export * from './services/auth';

@@ -69,3 +69,31 @@ export async function provisionTenant(
     return { tenantId: tenant.id, adminUserId: admin.id, rolesCreated };
   });
 }
+
+/** Lista tenants (Super Admin, PRD M2). */
+export async function listTenants(page = 1, pageSize = 50) {
+  const take = Math.min(100, Math.max(1, pageSize));
+  const skip = (Math.max(1, page) - 1) * take;
+  const [items, total] = await Promise.all([
+    prisma.tenant.findMany({
+      where: { deletedAt: null },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take,
+      include: { plan: true, _count: { select: { events: true, users: true } } },
+    }),
+    prisma.tenant.count({ where: { deletedAt: null } }),
+  ]);
+  return { items, pagination: { page, pageSize: take, total } };
+}
+
+export async function getTenant(id: string) {
+  return prisma.tenant.findUnique({
+    where: { id },
+    include: { plan: true, _count: { select: { events: true, users: true } } },
+  });
+}
+
+export async function setTenantStatus(id: string, status: 'active' | 'suspended' | 'trial') {
+  return prisma.tenant.update({ where: { id }, data: { status } });
+}

@@ -22,11 +22,13 @@
 - [x] Tokens firmados HMAC para QR/confirmación (`apps/web/lib/tokens.ts`)
 - [x] Migración inicial aplicada (~35 tablas) + extensiones pgcrypto/vector + RLS + seeds (Supabase us-west-2)
 - [x] M2 (base): servicio de aprovisionamiento de tenant (`provisionTenant`) — crea tenant + roles de sistema + permisos + admin · verificado contra DB real
+- [x] M2 (API): `listTenants`/`getTenant`/`setTenantStatus` + endpoints `GET/POST /api/v1/admin/tenants` (guard super admin)
+- [x] M1 (base): Supabase Auth server client + `getCurrentUser`/`requireUser`/`requireSuperAdmin`/`requirePermission`
+- [x] M3 (servicio+API): eventos CRUD (`createEvent` con slug único, `listEvents`, `getEvent`, `updateEvent`, `publishEvent`, `getEventStats`) + endpoints `GET/POST /api/v1/events`, `GET/PATCH /api/v1/events/[id]`, `POST .../publish` · verificado contra DB real (incl. aislamiento entre tenants)
 - [x] Contexto de tenant para Prisma (`withTenant`, set app.tenant_id)
-- [ ] M1 Auth (login/sesión con Supabase Auth) — EN CURSO
-- [ ] M2 Panel Super Admin (UI tenants/planes)
-- [ ] M12 Equipo y roles (UI)
-- [ ] M3 Gestión de eventos (CRUD + wizard)
+- [ ] M1 Auth UI (páginas login/logout) — EN CURSO
+- [ ] M2 Panel Super Admin (UI)
+- [ ] M3 Wizard de eventos (UI)
 - [ ] Branding por tenant
 
 ## Fase 2 — Público + Registro + Confirmación · PENDIENTE
