@@ -14,6 +14,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       nav={[
         { href: '/dashboard/events', label: 'Eventos' },
         { href: '/dashboard/events/new', label: 'Crear evento' },
+        { href: '/dashboard/settings', label: 'Ajustes' },
       ]}
     >
       {children}

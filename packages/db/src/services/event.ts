@@ -2,6 +2,7 @@ import { prisma } from '../index';
 import type { Prisma, EventStatus, EventType } from '@prisma/client';
 import { isValidSlug } from '@eventflow/core';
 import { setupDefaultCampaigns } from './messaging';
+import { assertCanCreateEvent } from './plan';
 
 /** Genera un slug a partir de un título. */
 export function slugify(input: string): string {
@@ -48,6 +49,7 @@ export interface CreateEventData {
 }
 
 export async function createEvent(tenantId: string, data: CreateEventData) {
+  await assertCanCreateEvent(tenantId);
   const slug = await uniqueSlug(tenantId, slugify(data.title));
   return prisma.event.create({
     data: {

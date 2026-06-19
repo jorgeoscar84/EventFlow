@@ -17,6 +17,20 @@ export default async function PublicEventPage({
   if (!data) notFound();
 
   const { event, registeredCount } = data;
+  const branding = (event.tenant.branding ?? {}) as {
+    accentColor?: string;
+    logoUrl?: string;
+    displayName?: string;
+  };
+  const accent = branding.accentColor;
+  const brandStyle = accent
+    ? ({
+        ['--color-brand-300' as string]: accent,
+        ['--color-brand-400' as string]: accent,
+        ['--color-brand-500' as string]: accent,
+        ['--color-brand-600' as string]: accent,
+      } as React.CSSProperties)
+    : undefined;
   const registerHref = `/o/${tenant}/${eventSlug}/registro`;
   const spotsLeft = event.capacity ? Math.max(0, event.capacity - registeredCount) : null;
   const fillPct = event.capacity ? Math.min(100, Math.round((registeredCount / event.capacity) * 100)) : 0;
@@ -28,12 +42,19 @@ export default async function PublicEventPage({
   ];
 
   return (
-    <div className="grain relative min-h-screen overflow-hidden">
+    <div className="grain relative min-h-screen overflow-hidden" style={brandStyle}>
       <div className="aurora" />
 
       {/* Nav */}
       <header className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
-        <span className="font-display text-lg tracking-tight">{event.tenant.name}</span>
+        <span className="font-display flex items-center gap-2 text-lg tracking-tight">
+          {branding.logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={branding.logoUrl} alt={event.tenant.name} className="h-7 w-auto" />
+          ) : (
+            (branding.displayName ?? event.tenant.name)
+          )}
+        </span>
         <Link
           href={registerHref}
           className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium backdrop-blur transition-colors hover:border-white/30 hover:bg-white/10"

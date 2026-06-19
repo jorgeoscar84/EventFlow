@@ -29,3 +29,4 @@ export * from './services/messaging';
 export * from './services/payment';
 export * from './services/report';
 export * from './services/raffle';
+export * from './services/plan';

@@ -10,7 +10,7 @@ export async function getPublicEvent(tenantSlug: string, eventSlug: string) {
       deletedAt: null,
     },
     include: {
-      tenant: { select: { name: true, slug: true } },
+      tenant: { select: { name: true, slug: true, branding: true } },
       customFields: { orderBy: { order: 'asc' } },
       ticketTypes: true,
     },

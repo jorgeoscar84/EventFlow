@@ -79,7 +79,13 @@
 - [x] API: crear sorteo + `draw`/`redraw` (permiso raffle:run)
 - [x] Config UI: `/dashboard/events/[id]/sorteos` (nombre, nº ganadores, premios, requiere presencia, incluir confirmados)
 - [x] **Pantalla del show** (`/sorteo/[raffleId]`): bombo animado (Framer Motion), tambores (Web Audio), **confeti** (canvas-confetti), control presente/ausente + re-sorteo, siguiente premio, resumen de ganadores
-## Fase 8 — Pulido / SaaS · PENDIENTE
+## Fase 8 — Pulido / SaaS · HECHO
+- [x] Límites de plan: `assertCanCreateEvent` (bloquea al exceder eventos activos) + `getPlanUsage` · verificado contra DB
+- [x] Branding por tenant: columna `branding` (migración) + ajustes (`/dashboard/settings`) + aplicado en landing pública (color de acento, logo, nombre)
+- [x] Uso del plan visible en Ajustes (barras de eventos/equipo + módulos)
+- [x] Hardening: cabeceras de seguridad (HSTS, X-Frame-Options, nosniff, Permissions-Policy, Referrer-Policy)
+- [x] Manejo de `PlanLimitError` (402) en API y formularios
+- [ ] i18n completo / dominios personalizados / A/B de landing — backlog
 ## Fase 9 — Asistente IA (M14) · PENDIENTE
 
 ---

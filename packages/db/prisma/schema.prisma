@@ -232,6 +232,7 @@ model Tenant {
   plan         Plan?        @relation(fields: [planId], references: [id])
   status       TenantStatus @default(trial)
   customDomain String?
+  branding     Json?
   createdBy    String?      @db.Uuid
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt

@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { createEventSchema } from '@eventflow/core';
-import { createEvent } from '@eventflow/db';
+import { createEvent, PlanLimitError } from '@eventflow/db';
 import { getCurrentUser } from '@/lib/auth';
 
 export interface CreateEventState {
@@ -36,7 +36,14 @@ export async function createEventAction(
     return { error: parsed.error.issues[0]?.message ?? 'Datos inválidos.' };
   }
 
-  await createEvent(user.tenantId, parsed.data);
+  try {
+    await createEvent(user.tenantId, parsed.data);
+  } catch (e) {
+    if (e instanceof PlanLimitError) {
+      return { error: 'Alcanzaste el límite de eventos activos de tu plan.' };
+    }
+    throw e;
+  }
   revalidatePath('/dashboard/events');
   redirect('/dashboard/events');
 }
