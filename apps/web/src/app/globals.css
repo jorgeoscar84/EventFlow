@@ -1,18 +1,29 @@
 @import 'tailwindcss';
 
-/* Design tokens — minimalista/tecnológico (PRD/08). Acento sobrescribible por tenant. */
+/* ── Design tokens — minimalista, premium, tecnológico (PRD/08) ── */
 @theme {
-  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --color-brand-50: #eff6ff;
-  --color-brand-500: #3b82f6;
-  --color-brand-600: #2563eb;
-  --color-brand-700: #1d4ed8;
+  --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-display), Georgia, 'Times New Roman', serif;
+
+  --color-ink-950: #07070a;
+  --color-ink-900: #0b0b10;
+  --color-ink-800: #131319;
+
+  --color-brand-50: #eef2ff;
+  --color-brand-200: #c7d2fe;
+  --color-brand-300: #a5b4fc;
+  --color-brand-400: #818cf8;
+  --color-brand-500: #6366f1;
+  --color-brand-600: #4f46e5;
+  --color-accent-400: #f0abfc;
+  --color-accent-500: #d946ef;
+
   --radius-xl: 1rem;
   --radius-2xl: 1.5rem;
 }
 
 :root {
-  color-scheme: light dark;
+  color-scheme: dark;
 }
 
 html,
@@ -22,6 +33,62 @@ body {
 
 body {
   font-family: var(--font-sans);
-  background: #0a0a0a;
-  color: #fafafa;
+  background-color: #07070a;
+  color: #ededf2;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Tipografía display (serif premium) con ligaduras y opsz */
+.font-display {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  letter-spacing: -0.02em;
+}
+
+/* Eyebrow / etiqueta monoespaciada con tracking amplio */
+.eyebrow {
+  font-size: 0.7rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgb(165 180 252 / 0.8);
+}
+
+/* Grano sutil para textura premium (sin imágenes externas) */
+.grain::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Resplandor de gradiente de marca */
+.aurora {
+  position: absolute;
+  inset: -20% -10% auto -10%;
+  height: 70vh;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(40% 50% at 20% 20%, rgb(99 102 241 / 0.25), transparent 70%),
+    radial-gradient(45% 55% at 80% 10%, rgb(217 70 239 / 0.18), transparent 70%);
+  filter: blur(40px);
+}
+
+@keyframes float-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+::selection {
+  background: rgb(99 102 241 / 0.35);
 }

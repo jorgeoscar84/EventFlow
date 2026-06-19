@@ -22,3 +22,5 @@ export * from './tenant-context';
 export * from './services/tenant';
 export * from './services/event';
 export * from './services/auth';
+export * from './services/registration';
+export * from './services/public';

@@ -37,8 +37,17 @@
 
 **Fase 1 funcionalmente operativa:** login → super admin crea empresa → admin de empresa entra y crea eventos. Verificado: arranque del server, guardas (307/401), servicios y aislamiento contra DB real.
 
-## Fase 2 — Público + Registro + Confirmación · PENDIENTE
-- [ ] M4 Landing + página de evento · M5 Registro · M6 Confirmación · M7(parcial) Email SES · M13 digital
+## Fase 2 — Público + Registro + Confirmación · EN CURSO
+- [x] M4 Landing pública del evento (premium): hero asimétrico, countdown animado, prueba social, barra de aforo, CTA sticky, reveals con Framer Motion · `/o/[tenant]/[event]`
+- [x] M5 Registro público: formulario con campos base + personalizados, validación Zod, dedupe, control de aforo→lista de espera · verificado contra DB real
+- [x] Pase digital con QR (`/pase/[qrToken]`) + página de confirmación (`/confirmar/[token]`) · verificado por HTTP (200)
+- [x] M6 Confirmación de asistencia (token) — confirma estado registered→confirmed
+- [x] M7 (parcial): email de confirmación por SES (best-effort, plantilla HTML) — listo para cuando se configuren credenciales SES
+- [x] Sistema visual premium: tipografía Fraunces+Inter, grano, aurora, animaciones
+- [x] Home y demo (`/o/demo/future-summit-2026`) con diseño premium
+- [ ] M7 (completo): recordatorios programados 24h/1h + reconfirmación (requiere worker/Redis + SES)
+- [ ] M13 lógica de eventos digitales (revelado de enlace a confirmados)
+- [ ] Constructor visual de landing (bloques configurables)
 
 ## Fase 3 — Check-in QR (M8) · PENDIENTE
 ## Fase 4 — Mensajería completa (M7) · PENDIENTE
